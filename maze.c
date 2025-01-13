@@ -11,7 +11,7 @@
 #define PATH		' '
 #define WALL		'8'
 
-typedef char** mtx;
+typedef char** mtx_t;
 typedef unsigned int uint;
 
 
@@ -20,8 +20,8 @@ void enter() {
 	while(getchar()!='\n');
 }
 
-void allocate_maze(mtx* mref, uint s) {
-	*mref = (mtx)malloc(s * sizeof(char*));
+void allocate_maze(mtx_t* mref, uint s) {
+	*mref = (mtx_t)malloc(s * sizeof(char*));
 	for (uint i = 0; i < s; i++)
 		(*mref)[i] = (char*)malloc(s * sizeof(char));
 	if (*mref == NULL) {
@@ -31,13 +31,13 @@ void allocate_maze(mtx* mref, uint s) {
 	}
 }
 
-void deallocate_maze(mtx m, uint s) {
+void deallocate_maze(mtx_t m, uint s) {
 	for (uint i = 0; i < s; i++)
 		free(m[i]);
 	free(m);
 }
 
-void maze_frame(mtx m, uint s) {		//outer walls, entrance & exit
+void maze_frame(mtx_t m, uint s) {		//outer walls, entrance & exit
 	for (uint y = 0; y < s; y++)
 		for (uint x = 0; x < s; x++)
 			if (x == 0 || x == s - 1 || y == 0 || y == s - 1)
@@ -46,7 +46,7 @@ void maze_frame(mtx m, uint s) {		//outer walls, entrance & exit
 	m[1][0] = m[s-2][s-1] = PATH;
 }
 
-void print(mtx m, uint s) {
+void print(mtx_t m, uint s) {
 	for (uint y = 0; y < s; y++) {
 		for (uint x = 0; x < s; x++)
 			for (uint sq = 0; sq < STRETCH_RATIO; sq++)
@@ -61,13 +61,13 @@ int random(int min, int max) {			//min & max included in the boundries
 
 //------------------------------------------- Recursive Division ------------------------------------------
 
-void make_path(mtx m, uint start, uint length, uint wall_i, int v) {	// puts a hole into the wall
+void make_path(mtx_t m, uint start, uint length, uint wall_i, int v) {	// puts a hole into the wall
 	int path_i = random(start, start+length-1);
 	(v ? (m[wall_i][path_i] = PATH) : (m[path_i][wall_i] = PATH));
 }
 
 
-void RecDiv(mtx m, uint start_x, uint end_x, uint start_y, uint end_y, int v) {
+void RecDiv(mtx_t m, uint start_x, uint end_x, uint start_y, uint end_y, int v) {
 	
 // exits, if area is too small
 	uint hlength = end_x - start_x;
@@ -115,7 +115,7 @@ void RecDiv(mtx m, uint start_x, uint end_x, uint start_y, uint end_y, int v) {
 
 int main(void) {
 	srand(time(NULL));
-	mtx Maze = NULL;
+	mtx_t Maze = NULL;
 	uint s = 20;
 
 	allocate_maze(&Maze, s);
