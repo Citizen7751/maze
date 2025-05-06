@@ -55,7 +55,7 @@ void print(mtx_t m, uint s) {
 	}
 }
 
-int random(int min, int max) {			//min & max included in the boundries
+int random(int min, int max) {			//min & max are included in the boundries
 	return rand() % (max - min + 1) + min;
 }
 
