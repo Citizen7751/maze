@@ -1,126 +1,159 @@
-//MIT License
-//Copyright (c) 2024 Citizen7751
+/* MIT License
+   Copyright (c) 2024- Citizen7751
+*/
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
-#define SAFE_LENGTH	3
-#define STRETCH_RATIO	2       //stretching to look like a square
-#define KILLSWITCH	100
-#define PATH		' '
-#define WALL		'8'
+typedef char** Mtx;
+typedef unsigned int Uint;
 
-typedef char** mtx_t;
-typedef unsigned int uint;
+typedef unsigned char Bool;
+#define true 1
+#define false 0
 
+const Uint SAFE_LENGTH   = 3;
+const Uint STRETCH_RATIO = 2;     /* stretching to look like a square */
+const Uint KILLSWITCH    = 100;
+const unsigned char PATH = ' ';
+const unsigned char WALL = '8';
 
-void enter() {
+void enter()
+{
 	printf("<enter>");
 	while(getchar()!='\n');
 }
 
-void allocate_maze(mtx_t* mref, uint s) {
-	*mref = (mtx_t)malloc(s * sizeof(char*));
-	for (uint i = 0; i < s; i++)
+
+void allocate_maze(Mtx* mref, Uint s)
+{
+	*mref = (Mtx)malloc(s * sizeof(char*));
+	Uint i;
+	for (i = 0; i < s; i++)
 		(*mref)[i] = (char*)malloc(s * sizeof(char));
 	if (*mref == NULL) {
 		perror("Failed to allocate memory!\n");
 		enter();
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 }
 
-void deallocate_maze(mtx_t m, uint s) {
-	for (uint i = 0; i < s; i++)
+
+void deallocate_maze(Mtx m, Uint s)
+{
+	Uint i;
+	for (i = 0; i < s; i++)
 		free(m[i]);
 	free(m);
 }
 
-void maze_frame(mtx_t m, uint s) {		//outer walls, entrance & exit
-	for (uint y = 0; y < s; y++)
-		for (uint x = 0; x < s; x++)
+
+void maze_frame(Mtx m, Uint s)    /* outer walls, entrance & exit */
+{
+	Uint x, y;
+	for (y = 0; y < s; y++)
+		for (x = 0; x < s; x++)
 			if (x == 0 || x == s - 1 || y == 0 || y == s - 1)
 				m[x][y] = WALL;
 			else m[x][y] = PATH;
 	m[1][0] = m[s-2][s-1] = PATH;
 }
 
-void print(mtx_t m, uint s) {
-	for (uint y = 0; y < s; y++) {
-		for (uint x = 0; x < s; x++)
-			for (uint sq = 0; sq < STRETCH_RATIO; sq++)
+
+void print(Mtx m, Uint s)
+{
+	Uint x, y, sq;
+	for (y = 0; y < s; y++) {
+		for (x = 0; x < s; x++)
+			for (sq = 0; sq < STRETCH_RATIO; sq++)
 				putchar(m[x][y]);
 		putchar('\n');
 	}
 }
 
-int random(int min, int max) {			//min & max are included in the boundries
+
+int random(int min, int max)    /* min & max are included in the boundries */
+{
 	return rand() % (max - min + 1) + min;
 }
 
-//------------------------------------------- Recursive Division ------------------------------------------
 
-void make_path(mtx_t m, uint start, uint length, uint wall_i, int v) {	// puts a hole into the wall
+/* --------------------------- Recursive Division --------------------------- */
+
+
+/* puts a hole into the wall */
+void make_path(Mtx m, Uint start, Uint length, Uint wall_i, Bool v)
+{
 	int path_i = random(start, start+length-1);
 	(v ? (m[wall_i][path_i] = PATH) : (m[path_i][wall_i] = PATH));
 }
 
 
-void RecDiv(mtx_t m, uint start_x, uint end_x, uint start_y, uint end_y, int v) {
-	
-// exits, if area is too small
-	uint hlength = end_x - start_x;
-	uint vlength = end_y - start_y;
+void Recdiv(Mtx m, Uint start_x, Uint end_x, Uint start_y, Uint end_y, Bool v)
+{
+	Uint hlength, vlength;
+	Uint wall_i, sbound, ebound, tries = 0;
+	Uint x, y;
+	Uint start, length;
+	Uint nex_lu, ney_lu, nsx_rd, nsy_rd;
+	Bool nv;
+
+/* exits, if area is too small */
+	hlength = end_x - start_x;
+	vlength = end_y - start_y;
 	if (hlength <= SAFE_LENGTH || vlength <= SAFE_LENGTH) return;
 
 
-// looks for a place for the wall to be put
-// if can't find and stucks in a infinite loop, the killswitch returns it after 100 trials
-	uint wall_i, sbound, ebound, tries = 0;
-	do {
+/* looks for a place for the wall to be put
+   if can't find and stucks in a infinite loop,
+   the killswitch returns it after 100 trials
+*/
+	do { /* checking wall boundries -> wall can only come between other walls */
 		wall_i = v ? random(start_x+2, end_x-2) : random(start_y+2, end_y-2);
-		sbound = v ? m[wall_i][start_y] : m[start_x][wall_i];		// checking wall boundries ->
-		ebound = v ? m[wall_i][end_y] : m[end_x][wall_i];		// wall can only come between other walls
+		sbound = v ? m[wall_i][start_y] : m[start_x][wall_i];
+		ebound = v ? m[wall_i][end_y] : m[end_x][wall_i];
 		tries++;
 	} while ((sbound != WALL || ebound != WALL) && tries < KILLSWITCH);
 
 	if (tries == KILLSWITCH) return;
 
 
-// draws the wall
-	for (uint y = start_y; y <= end_y; y++)
-		for (uint x = start_x; x <= end_x; x++)
+ /* draws the wall */
+	for (y = start_y; y <= end_y; y++)
+		for (x = start_x; x <= end_x; x++)
 			v ? (m[wall_i][y] = WALL) : (m[x][wall_i] = WALL);
 
 
-// makes a passage in that wall
-	uint start = v ? start_y : start_x;
-	uint length = v ? vlength : hlength;
+/* makes a passage in that wall */
+	start = v ? start_y : start_x;
+	length = v ? vlength : hlength;
 	make_path(m, start+1, length-1, wall_i, v);
 
 
-// calculating the divided areas and recursively going to both directions
-	int nv = hlength >= vlength;		// new vertical from the current area
-	uint nex_lu = v ? wall_i : end_x;	// new end x - left, up
-	uint ney_lu = v ? end_y : wall_i;	// new end y - left, up
-	uint nsx_rd = v ? wall_i : start_x;	// new start x - right, down
-	uint nsy_rd = v ? start_y : wall_i;	// new start y - right, down
-	RecDiv(m, start_x, nex_lu, start_y, ney_lu, nv);
-	RecDiv(m, nsx_rd, end_x, nsy_rd, end_y, nv);
+/* calculating the divided areas and recursively going to both directions */
+	nv = hlength >= vlength;		/* new vertical from the current area */
+	nex_lu = v ? wall_i : end_x;	/* new end x - left, up */
+	ney_lu = v ? end_y : wall_i;	/* new end y - left, up */
+	nsx_rd = v ? wall_i : start_x;	/* new start x - right, down */
+	nsy_rd = v ? start_y : wall_i;	/* new start y - right, down */
+	Recdiv(m, start_x, nex_lu, start_y, ney_lu, nv);
+	Recdiv(m, nsx_rd, end_x, nsy_rd, end_y, nv);
 }
 
-//---------------------------------------------------------------------------------------------------------
+/* -------------------------------------------------------------------------- */
 
 
-int main(void) {
+int main(void)
+{
+	Mtx Maze = NULL;
+	Uint s = 20;
+
 	srand(time(NULL));
-	mtx_t Maze = NULL;
-	uint s = 20;
 
 	allocate_maze(&Maze, s);
 	maze_frame(Maze, s);
-	RecDiv(Maze, 0, s-1, 0, s-1, random(0, 1));		//indexing: 0..s-1
+	Recdiv(Maze, 0, s-1, 0, s-1, random(0, 1));	  /* indexing: 0..s-1 */
 	print(Maze, s);
 	deallocate_maze(Maze, s);
     
